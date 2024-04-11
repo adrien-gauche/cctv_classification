@@ -1,0 +1,7 @@
+{
+    "CAMERA1_IP": "192.168.1.1",
+    "CAMERA2_IP": "192.168.1.2",
+    "CAMERA_USER": "user",
+    "CAMERA_PASSWORD": "yourpassword"
+  }
+  

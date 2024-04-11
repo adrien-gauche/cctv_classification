@@ -1,12 +1,4 @@
 from cctv_classification import *
-import cv2  # For image processing
-import os  # For file operations
-import logging  # For logging
-from shutil import move  # For moving files
-import matplotlib.pyplot as plt
-from tqdm import tqdm  # For progress bar
-import pandas as pd
-
 
 # Initialize an empty list to log detections
 detections = []
@@ -53,4 +45,4 @@ df = pd.DataFrame(detections)
 df.set_index("datetime", inplace=True)
 
 # Save the DataFrame to a CSV file
-df.to_csv("detections.csv")
+df.to_csv("detections.csv", index=True)

@@ -33,11 +33,18 @@ class Config:
     MODEL_PATH = "cctv_classification/frozen_inference_graph.pb"
     CONFIG_PATH = "cctv_classification/ssd_mobilenet_v2_coco_2018_03_29.pbtxt"
 
-    # use configuration from config.json
+    ## use configuration from config.json
+    #CAMERAS = [
+    #    f"http://{config['CAMERA1_IP']}/mjpeg.cgi?user={config['CAMERA_USER']}?password={config['CAMERA_PASSWORD']}",
+    #    f"http://{config['CAMERA2_IP']}/mjpeg.cgi?user={config['CAMERA_USER']}?password={config['CAMERA_PASSWORD']}",
+    #]
+
+    # Generate camera URLs dynamically
     CAMERAS = [
-        f"http://{config['CAMERA1_IP']}/mjpeg.cgi?user={config['CAMERA_USER']}?password={config['CAMERA_PASSWORD']}",
-        f"http://{config['CAMERA2_IP']}/mjpeg.cgi?user={config['CAMERA_USER']}?password={config['CAMERA_PASSWORD']}",
+        f"http://{ip}/mjpeg.cgi?user={config['CAMERA_USER']}&password={config['CAMERA_PASSWORD']}"
+        for ip in config["CAMERAS"].values()
     ]
+
     # COCO classes initialization
     CLASSES = [
         "background",

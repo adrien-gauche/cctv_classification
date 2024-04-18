@@ -48,7 +48,7 @@ def main():
 
                 image_path = os.path.join(root, file)  # Full path to the image
 
-                image = get_image(image_path)
+                image = read_image(image_path)
                 image = crop_image(image, Config.CROP_MARGINS)
 
                 # DEBUG

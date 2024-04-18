@@ -8,6 +8,9 @@ import pandas as pd
 import numpy as np
 import json  # For loading the configuration file
 
+COLOR = (255, 0, 0)  # Green color for bounding boxes
+THICKNESS = 2  # Thickness of the bounding box lines
+
 
 def load_config(config_path="config.json"):
     with open(config_path, "r") as config_file:
@@ -15,17 +18,18 @@ def load_config(config_path="config.json"):
     return config
 
 
-config = load_config()  # Load the configuration file
-
-# Logging configuration
-logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
-)
+try:
+    config = load_config()  # Load the configuration file
+except Exception as e:
+    logging.error(f"Error loading configuration: {e}")
+    config = {}  # Use an empty dictionary if the configuration file could not be loaded
 
 
 # Centralized configuration class
 class Config:
-    LOG_LEVEL = logging.INFO
+    LOG_LEVEL = (
+        logging.INFO
+    )  # Different log levels: DEBUG, INFO, WARNING, ERROR, CRITICAL
     LOG_FORMAT = "%(asctime)s - %(levelname)s - %(message)s"
     # Paths to the TensorFlow object detection model files
     # https://github.com/ChiekoN/OpenCV_SSD_MobileNet/tree/master/model
@@ -129,11 +133,10 @@ class Config:
         "toothbrush",
     ]
     DETECT_CLASSES = {"person": CLASSES.index("person"), "cat": CLASSES.index("cat")}
-    CONFIDENCE = 0.1  # Confidence threshold for detections
+    CONFIDENCE = 0.6  # Confidence threshold for detections
 
     ANALYZE_EVERY_N_SECONDS = 2  # Analyze a frame every N seconds
     CROP_MARGINS = {"top": 10, "bottom": 200, "left": 0, "right": 200}
-
 
 # Iterate over the keys of DETECT_CLASSES to generate folder names and ensure they exist
 for class_name in Config.DETECT_CLASSES.keys():
@@ -146,9 +149,10 @@ logging.basicConfig(level=Config.LOG_LEVEL, format=Config.LOG_FORMAT)
 
 # Load the object detection model
 net = cv2.dnn.readNetFromTensorflow(Config.MODEL_PATH, Config.CONFIG_PATH)
+# net = cv2.dnn.readNetFromONNX("cctv_classification/yolov8x.onnx")
 
 
-def get_image(image_path):
+def read_image(image_path):
     image = None
     try:
         image = cv2.imread(image_path)
@@ -184,16 +188,23 @@ def analyze_image(image):
         return None, None
 
     blob = cv2.dnn.blobFromImage(
-        image, swapRB=True, crop=False
+        image,
+        swapRB=True,
+        crop=False,
+        size=(640, 640),  # YOLOv8x model input size
     )  # Create a blob from the image
+
     net.setInput(blob)  # Set the input for the neural network
     detections = net.forward()  # Perform a forward pass of the neural network
 
     (H, W) = image.shape[:2]  # Get the height and width of the image
 
+    # https://gist.github.com/leandrobmarinho/26bd5eb9267654dbb9e37f34788486b5
+    # https://towardsdatascience.com/non-maximum-suppression-nms-93ce178e177c
+
     for i in range(detections.shape[2]):
-        class_id = int(detections[0, 0, i, 1])
         confidence = detections[0, 0, i, 2]
+        class_id = int(detections[0, 0, i, 1])
 
         if confidence > confidence_threshold:
             ## Iterate through DETECT_CLASSES to find a match for the detected class_id
@@ -232,12 +243,18 @@ def show_rectangles(image, detected_object):
     # Draw bounding box and add text
     # parameters: image, start_point, end_point, color, thickness
     # color parameter: BGR format
-    cv2.rectangle(image, (startX, startY), (endX, endY), (255, 0, 0), 2)
+    cv2.rectangle(image, (startX, startY), (endX, endY), COLOR, THICKNESS)
 
     # Add text with object type and confidence
     text = f"{object_type}: {confidence:.2f}"
     cv2.putText(
-        image, text, (startX, startY - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 2
+        image,
+        text,
+        (startX, startY - 5),
+        cv2.FONT_HERSHEY_SIMPLEX,
+        0.5,
+        COLOR,
+        THICKNESS,
     )
 
     return image
@@ -269,4 +286,9 @@ def write_image(annotated_image, date, time, object_type=None, confidence=None):
 
     # Using cv2.imwrite() method
     # Saving the image
-    cv2.imwrite(os.path.join(destination_folder, new_filename), annotated_image)
+    try:
+        cv2.imwrite(os.path.join(destination_folder, new_filename), annotated_image)
+    except Exception as e:
+        logging.error(f"Error writing image: {e}")
+
+    # cv2.imwrite(os.path.join(destination_folder, new_filename), annotated_image)

@@ -6,6 +6,7 @@
 from cctv_classification import *
 import argparse
 import sys
+import time
 
 
 def main():
@@ -49,12 +50,13 @@ def main():
                 image_path = os.path.join(root, file)  # Full path to the image
 
                 image = read_image(image_path)
-                image = crop_image(image, Config.CROP_MARGINS)
 
-                # DEBUG
-                # cv2.imshow('GFG', image) # Display the image DEBUG
-                # cv2.waitKey(0)  # Wait for a key press to continue
-                # cv2.destroyAllWindows()  # Close the image window
+                # Vérifier si l'image est corrompue
+                if is_image_corrupted(image):
+                    print(f"L'image {image_path} est corrompue. Elle sera ignorée.")
+                    continue  # Ignorer cette image et passer à la suivante
+
+                image = crop_image(image, Config.CROP_MARGINS)
 
                 detected_objects = analyze_image(
                     image
@@ -65,11 +67,23 @@ def main():
                         object_type = obj["type"]
                         confidence = obj["confidence"]
                         bbox = obj["bbox"]
+                        execution_time = obj["execution_time"]
 
                         image = show_rectangles(image, obj)
 
                         # copy_image(image_path, date, time, object_type, confidence)
-                        write_image(image, date, time, object_type, confidence)
+                        # write_image(image, date, time, object_type, confidence)
+
+                        # Adjust the destination folder to include both object type and date
+                        destination_folder = os.path.join(
+                            base_folder, f"{object_type}_folder", date
+                        )
+                        new_filename = f"{time}.jpg"
+                        write_image(
+                            image,
+                            destination_folder,
+                            new_filename,
+                        )
 
                         # Convert date and time into a datetime object with the correct format
                         datetime_str = (
@@ -86,6 +100,7 @@ def main():
                                 "object_type": object_type,
                                 "confidence": confidence,
                                 "bbox": bbox,
+                                "execution_time": execution_time,
                             }
                         )
                     print(pd.DataFrame(detections))
@@ -96,15 +111,28 @@ def main():
                     # cv2.destroyAllWindows()  # Close the image window
 
     # Convert the list of detections into a DataFrame
-    df = pd.DataFrame(detections)
-    df.set_index("datetime", inplace=True)
+    if detections:
+        df = pd.DataFrame(detections)
+        df.set_index("datetime", inplace=True)
 
-    # Save the DataFrame to a CSV file
-    df.to_csv("detections.csv", index=True)
+        # Save the DataFrame to a CSV file
+        file_name = "detections.csv"
+        full_path = os.path.join(base_folder, file_name)
 
-    # Optionally print DataFrame for visual confirmation
-    print(df)
+        df.to_csv(full_path, index=True)
+
+        # Optionally print DataFrame for visual confirmation
+        print(df)
+    else:
+        print("Aucune détection n'a été trouvée.")
 
 
 if __name__ == "__main__":
+
+    start_time = time.time()
     main()
+    end_time = time.time()
+
+    # Calculate the time of execution
+    execution_time = end_time - start_time
+    print(f"Le script a pris {execution_time:.2f} secondes pour s'exécuter.")
